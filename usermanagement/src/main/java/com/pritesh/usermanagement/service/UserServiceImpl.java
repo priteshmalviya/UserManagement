@@ -17,6 +17,7 @@ import com.pritesh.usermanagement.utils.Constants;
 import com.pritesh.usermanagement.utils.JwtUtils;
 import com.pritesh.usermanagement.utils.Utils;
 
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -32,16 +33,14 @@ public class UserServiceImpl {
     @Autowired
     private JwtUtils jwtUtil;
 
+    @Autowired
+    private EmailService emailService;
+
+    Map<String,String> emailOtpMap = new HashMap<>();
+
 
     public ResponseEntity<Map<String, Object>> createUser(SignUpUserDto userDto) {
         log.debug("Attempting to create user with username: {}", userDto.getUserName());
-
-        if (userDto.getPassword().length() < 8) {
-            log.error("Password must be at least 8 characters long");
-            return ResponseEntity.status(400).body(
-                Utils.generateResponse(Constants.FAILED_STRING, Constants.PASSWORD_MUST_BE_AT_LEAST_8_CHARACTERS_LONG)
-            );
-        }
 
         User existingUser = userRepository.findByUserName(userDto.getUserName());
         if (existingUser != null) {
@@ -56,6 +55,14 @@ public class UserServiceImpl {
             log.error("User with email {} already exists", userDto.getEmail());
             return ResponseEntity.status(400).body(
                 Utils.generateResponse(Constants.FAILED_STRING, Constants.USER_ALREADY_EXISTS_WITH_THIS_EMAIL)
+            );
+        }
+        
+        String validationResult = Utils.user(userDto);
+        if (validationResult != Constants.SUCCESS_STRING) {
+            log.warn("Validation failed for user: {}", userDto.getUserName());
+            return ResponseEntity.status(400).body(
+                Utils.generateResponse(Constants.FAILED_STRING, validationResult)
             );
         }
 
@@ -176,5 +183,89 @@ public class UserServiceImpl {
                 Utils.generateResponse(Constants.FAILED_STRING, Constants.INVALID_PASSWORD)
             );
         }
+    }
+
+    public ResponseEntity<Map<String, Object>> sendOtp(String email) {
+        log.debug("Attempting to forgot password for email: {}", email);
+        log.debug("inside sendOtp emailOtpMap is {}",emailOtpMap);
+        User user = userRepository.findByEmail(email);
+        if (user != null) {
+            String otp = Utils.generateOtp(6);
+            String message = String.format(Constants.FORGOT_PASSWORD_MAIL_BODY, user.getName(), otp);
+            boolean isEmailSent = emailService.sendEmail(email, Constants.FORGOT_PASSWORD_MAIL_SUBJECT, message);
+            if (isEmailSent) {
+                emailOtpMap.put(email, otp);
+                log.info("Forgot password successful for user: {}", user.getUserName());
+                return ResponseEntity.status(200).body(
+                    Utils.generateResponse(Constants.SUCCESS_STRING, Constants.MAIL_SENT_SUCCESSFUL_MESSAGE)
+                );
+            }else{
+                log.warn("Forgot password failed for user: {}", user.getUserName());
+                return ResponseEntity.status(400).body(
+                    Utils.generateResponse(Constants.FAILED_STRING, Constants.MAIL_SEND_FAILED_MESSAGE)
+                );
+            }
+        }
+        return ResponseEntity.status(404).body(
+            Utils.generateResponse(Constants.FAILED_STRING, Constants.USER_NOT_FOUND_MESSAGE)
+        );
+    }
+
+    public ResponseEntity<Map<String, Object>> verifyOtp(String email, String otp) {
+        log.debug("Attempting to verify OTP for email: {}", email);
+        log.debug("Attempting to verify OTP for otp: {}", otp);
+        log.debug("emailOtpMap is {}",emailOtpMap);
+        log.debug("inside verifyOtp emailOtpMap is {}",emailOtpMap);
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            log.warn("Verify OTP failed: user not found");
+            return ResponseEntity.status(404).body(
+                Utils.generateResponse(Constants.FAILED_STRING, Constants.USER_NOT_FOUND_MESSAGE)
+            );
+        }
+        if (emailOtpMap.containsKey(email)) {
+            if (emailOtpMap.get(email).equals(otp)) {
+                log.info("OTP verified successfully for user: {}", user.getUserName());
+                emailOtpMap.remove(email);
+                return ResponseEntity.status(200).body(
+                    Utils.generateResponse(Constants.SUCCESS_STRING, Constants.OTP_VERIFIED_SUCCESSFULLY)
+                );
+            }else{
+                log.warn("OTP verification failed for user: {}", user.getUserName());
+                return ResponseEntity.status(400).body(
+                    Utils.generateResponse(Constants.FAILED_STRING, Constants.INVALID_OTP)
+                );
+            }
+        }
+        log.info("OTP verified successfully for user: {}", user.getUserName());
+        return ResponseEntity.status(404).body(
+            Utils.generateResponse(Constants.FAILED_STRING, Constants.OTP_NOT_FOUND_MESSAGE)
+        );
+    }
+
+    public ResponseEntity<Map<String, Object>> updateUser(SignUpUserDto user) {
+        log.debug("Attempting to update user: {}", user);
+        User existingUser = userRepository.findByUserName(user.getUserName());
+        if (existingUser == null) {
+            log.warn("Update user failed: user not found");
+            return ResponseEntity.status(404).body(
+                Utils.generateResponse(Constants.FAILED_STRING, Constants.USER_NOT_FOUND_MESSAGE)
+            );
+        }
+        existingUser.setEmail(user.getEmail());
+        existingUser.setPassword(passwordEncoder.encode(user.getPassword()));
+        existingUser.setName(user.getName());
+        String validationResult = Utils.user(user);
+        if (validationResult != Constants.SUCCESS_STRING) {
+            log.warn("Validation failed for user: {}", user.getUserName());
+            return ResponseEntity.status(400).body(
+                Utils.generateResponse(Constants.FAILED_STRING, validationResult)
+            );
+        }
+        userRepository.save(existingUser);
+        log.info("User updated successfully: {}", existingUser);
+        return ResponseEntity.status(200).body(
+            Utils.generateResponse(Constants.SUCCESS_STRING, Constants.USER_UPDATED_SUCCESSFULLY)
+        );
     }
 }

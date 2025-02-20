@@ -51,6 +51,24 @@ public class Constants {
 
     public static final String LOGIN_SUCCESSFUL_JSON_RESPONSE = "{\"message\": \"Login successful\", \"token\": \"%s\"}";
     
+    public static final String MAIL_SENT_SUCCESSFUL_MESSAGE = "Mail sent successfully";
+
+    public static final String OTP_VERIFIED_SUCCESSFULLY = "OTP verified successfully";
+
+    public static final String OTP_NOT_FOUND_MESSAGE = "OTP not found";
+
+    public static final String INVALID_OTP = "Invalid OTP";
+
+    public static final String MAIL_SEND_FAILED_MESSAGE = "Mail send failed please try again later";
+
+    public static final String USER_UPDATED_SUCCESSFULLY = "User updated successfully";
+
+    public static final String USERNAME_CANNOT_BE_EMPTY = "Username cannot be empty";
+
+    public static final String INVALID_EMAIL = "Invalid email";
+
+    public static final String NAME_CANNOT_BE_EMPTY = "Name cannot be empty";
+    
     // JSON
     public static final String BLANK_STRING ="";
     public static final String EMPTY_JSON_ARRAY = "[]";
@@ -77,12 +95,17 @@ public class Constants {
     public static final String PING_ENDPOINT = "/ping";
     public static final String CREATE_USER_ENDPOINT = "/create-user";
     public static final String LOGIN_ENDPOINT = "/login";
+    public static final String VERIFY_EMAIL_ENDPOINT = "/verify-email";
+    public static final String SEND_OTP_ENDPOINT = "/send-otp/{email}";
+    public static final String UPDATE_USER_ENDPOINT = "/update-user";
 
     public static final String USER_ENDPOINT = "/users";
     public static final String GET_ALL_USERS_ENDPOINT = "/get-all-users";
     public static final String GET_USER_BY_ID_ENDPOINT = "/get-user-by-id/{id}";
     public static final String GET_USER_BY_USERNAME_ENDPOINT = "/get-user-by-username/{username}";
     public static final String GET_USER_BY_EMAIL_ENDPOINT = "/get-user-by-email/{email}";
+    public static final String VERIFY_OTP_ENDPOINT = "/verify-otp/{email}/{otp}";
+
 
 
     // other constants
@@ -91,5 +114,26 @@ public class Constants {
     public static final String PASSWORD_SMALL_STRING = "password";
     public static final String TYPE_STRING = "typ";
     public static final String JWT_STRING = "JWT";
+    public static final String EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+
+    //mailing
+    public static final String FORGOT_PASSWORD_MAIL_SUBJECT = "Password Reset Request - Your Account Security";
+    public static final String FORGOT_PASSWORD_MAIL_BODY = """
+            Dear %s,
+            
+            We received a request to reset your password. To proceed with the password reset, please use the following One-Time Password (OTP):
+            
+            OTP: %s
+            
+            This OTP will expire in 10 minutes for security purposes. If you didn't request this password reset, please ignore this email or contact our support team immediately.
+            
+            For security reasons, please:
+            - Never share this OTP with anyone
+            - Make sure to use a strong password
+            - Use this OTP only on our official website
+            
+            Best regards,
+            UserManagement Team
+            """;
 
 }
