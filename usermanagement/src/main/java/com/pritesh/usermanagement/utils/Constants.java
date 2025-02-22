@@ -68,6 +68,10 @@ public class Constants {
     public static final String INVALID_EMAIL = "Invalid email";
 
     public static final String NAME_CANNOT_BE_EMPTY = "Name cannot be empty";
+
+    public static final String INVALID_TOKEN = "{\"error\": \"Invalid token\"}";
+
+    public static final String UNAUTHORIZED = "{\"error\": \"Unauthorized\"}";
     
     // JSON
     public static final String BLANK_STRING ="";
@@ -96,7 +100,7 @@ public class Constants {
     public static final String CREATE_USER_ENDPOINT = "/create-user";
     public static final String LOGIN_ENDPOINT = "/login";
     public static final String VERIFY_EMAIL_ENDPOINT = "/verify-email";
-    public static final String SEND_OTP_ENDPOINT = "/send-otp/{email}";
+    public static final String SEND_OTP_ENDPOINT = "/send-otp/{email}/{username}";
     public static final String UPDATE_USER_ENDPOINT = "/update-user";
 
     public static final String USER_ENDPOINT = "/users";
@@ -115,6 +119,7 @@ public class Constants {
     public static final String TYPE_STRING = "typ";
     public static final String JWT_STRING = "JWT";
     public static final String EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+    public static final String APPLICATION_JSON = "application/json";
 
     //mailing
     public static final String FORGOT_PASSWORD_MAIL_SUBJECT = "Password Reset Request - Your Account Security";

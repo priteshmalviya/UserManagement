@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,7 +18,6 @@ import com.pritesh.usermanagement.utils.Constants;
 import com.pritesh.usermanagement.utils.JwtUtils;
 import com.pritesh.usermanagement.utils.Utils;
 
-import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -36,8 +36,8 @@ public class UserServiceImpl {
     @Autowired
     private EmailService emailService;
 
-    Map<String,String> emailOtpMap = new HashMap<>();
-
+    @Autowired
+    private RedisTemplate<String, Object> redisTemplate;
 
     public ResponseEntity<Map<String, Object>> createUser(SignUpUserDto userDto) {
         log.debug("Attempting to create user with username: {}", userDto.getUserName());
@@ -185,59 +185,51 @@ public class UserServiceImpl {
         }
     }
 
-    public ResponseEntity<Map<String, Object>> sendOtp(String email) {
-        log.debug("Attempting to forgot password for email: {}", email);
-        log.debug("inside sendOtp emailOtpMap is {}",emailOtpMap);
-        User user = userRepository.findByEmail(email);
-        if (user != null) {
+    public ResponseEntity<Map<String, Object>> sendOtp(String email,String username) {
+        log.debug("Attempting to send otp for email: {}", email);
+        // User user = userRepository.findByEmail(email);
+        if (email.matches(Constants.EMAIL_REGEX)) {
             String otp = Utils.generateOtp(6);
-            String message = String.format(Constants.FORGOT_PASSWORD_MAIL_BODY, user.getName(), otp);
+            String message = String.format(Constants.FORGOT_PASSWORD_MAIL_BODY, username, otp);
             boolean isEmailSent = emailService.sendEmail(email, Constants.FORGOT_PASSWORD_MAIL_SUBJECT, message);
             if (isEmailSent) {
-                emailOtpMap.put(email, otp);
-                log.info("Forgot password successful for user: {}", user.getUserName());
+                redisTemplate.opsForValue().set(email, otp);
+                log.info("Forgot password successful for user: {}", email);
                 return ResponseEntity.status(200).body(
                     Utils.generateResponse(Constants.SUCCESS_STRING, Constants.MAIL_SENT_SUCCESSFUL_MESSAGE)
                 );
             }else{
-                log.warn("Forgot password failed for user: {}", user.getUserName());
+                log.warn("Forgot password failed for user: {}", email);
                 return ResponseEntity.status(400).body(
                     Utils.generateResponse(Constants.FAILED_STRING, Constants.MAIL_SEND_FAILED_MESSAGE)
                 );
             }
         }
         return ResponseEntity.status(404).body(
-            Utils.generateResponse(Constants.FAILED_STRING, Constants.USER_NOT_FOUND_MESSAGE)
+            Utils.generateResponse(Constants.FAILED_STRING, Constants.INVALID_EMAIL)
         );
     }
 
     public ResponseEntity<Map<String, Object>> verifyOtp(String email, String otp) {
         log.debug("Attempting to verify OTP for email: {}", email);
         log.debug("Attempting to verify OTP for otp: {}", otp);
-        log.debug("emailOtpMap is {}",emailOtpMap);
-        log.debug("inside verifyOtp emailOtpMap is {}",emailOtpMap);
-        User user = userRepository.findByEmail(email);
-        if (user == null) {
-            log.warn("Verify OTP failed: user not found");
-            return ResponseEntity.status(404).body(
-                Utils.generateResponse(Constants.FAILED_STRING, Constants.USER_NOT_FOUND_MESSAGE)
-            );
-        }
-        if (emailOtpMap.containsKey(email)) {
-            if (emailOtpMap.get(email).equals(otp)) {
-                log.info("OTP verified successfully for user: {}", user.getUserName());
-                emailOtpMap.remove(email);
+        Object otpFromRedis = redisTemplate.opsForValue().get(email);
+        log.debug("otpFromRedis is {}",otpFromRedis);
+        if (otpFromRedis != null) {
+            if (otpFromRedis.equals(otp)) {
+                log.info("OTP verified successfully for user: {}", email);
+                redisTemplate.opsForValue().getAndDelete(email);
                 return ResponseEntity.status(200).body(
                     Utils.generateResponse(Constants.SUCCESS_STRING, Constants.OTP_VERIFIED_SUCCESSFULLY)
                 );
             }else{
-                log.warn("OTP verification failed for user: {}", user.getUserName());
+                log.warn("OTP verification failed for user: {}", email);
                 return ResponseEntity.status(400).body(
                     Utils.generateResponse(Constants.FAILED_STRING, Constants.INVALID_OTP)
                 );
             }
         }
-        log.info("OTP verified successfully for user: {}", user.getUserName());
+        log.info("OTP verified successfully for user: {}",email);
         return ResponseEntity.status(404).body(
             Utils.generateResponse(Constants.FAILED_STRING, Constants.OTP_NOT_FOUND_MESSAGE)
         );

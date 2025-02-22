@@ -45,8 +45,8 @@ public class PublicRest {
     }
 
     @PostMapping(Constants.SEND_OTP_ENDPOINT)
-    public ResponseEntity<Map<String, Object>> sendOtp(@PathVariable String email) {
-        return userService.sendOtp(email);
+    public ResponseEntity<Map<String, Object>> sendOtp(@PathVariable String email,@PathVariable String username) {
+        return userService.sendOtp(email,username);
     }
 
     @PostMapping(Constants.VERIFY_OTP_ENDPOINT)
